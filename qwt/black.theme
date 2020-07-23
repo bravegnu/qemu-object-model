@@ -1,0 +1,6 @@
+border-color:255,255,255
+fill-color:0,0,0
+select-color:0,0,200
+activate-color:100,100,100
+font:qwt/opensans.ttf,16
+text-color:255,255,255
