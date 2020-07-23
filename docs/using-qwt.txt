@@ -1,0 +1,136 @@
+= QWT
+
+== Introduction
+
+QWT is a simple GUI library written using QOM, to demonstrate object
+oriented programming in C using QOM. It has Python bindings, so that
+you can first experiment in Python and try the same in C.
+
+== The Emitter Object
+
+At the heart of QWT is the Emitter, that allows callbacks based
+programming. An emitter is an object that can invoke a callback, in
+response to one or more signals.
+
+[source,c]
+------
+include::emitter-1.c[]
+------
+
+The emitter object is created using `emitter_new()`. The object is
+dynamically allocated, and returned.
+
+The functions `emitter_set_callback()`, `emitter_set_when()` and
+`emitter_emit()` are methods. Methods of object are identified by
+their prefix, all emitter methods start with `emitter_` prefix. They
+accept a pointer to the emitter object as the first argument.
+
+The emitter methods, store the callback and for which signals the
+callback is to be invoked in private attributes. And when the
+`emitter_emit()` method is invoked, with the corresponding signal, the
+callback is invoked.
+
+Here is another example, that shows the functioning of the emitter
+object. Here the `emitter_emit()` method is invoked multiple times. It
+is invoked twice with the `SIGNAL_CLICKED` and once with
+`SIGNAL_CLOSE`. Since we have specified that the callback is to be
+called only when the `SIGNAL_CLICKED` occurs, the callback is invoked
+only twice.
+
+[source,c]
+------
+include::emitter-2.c[]
+------
+
+The emitter is a good example of a simple object, that stores
+attributes and has methods. The nice thing about OOP is that, you can
+have multiple object instances, that work independent of each
+other. The following example shows, that you can have multiple
+instances of emitter, each with its own set of callbacks, and when it
+is to be triggered.
+
+[source,c]
+------
+include::emitter-3.c[]
+------
+
+== The App Object
+
+The next object that we are going to look at is the `App` object. The
+following program shows the creation of the `App` object. The
+`app_set_title()` and `app_run()` are methods of the `App` object. The
+methods start with `app_` prefix and accept a pointer to the `App`
+object as first argument.
+
+[source,c]
+------
+include::app-1.c[]
+------
+
+The `app_run()` method runs an indefinite loop, that waits for events
+from the user, processes the events and updates the UI. For now, we
+haven't specified how to process any event, so the window does not
+close, when the close button is clicked. Use Ctrl-C in the terminal to
+terminate the application.
+
+The `App` type is considered to be "derived" from the `Emitter`
+type. Which means it can do pretty much everything that the `Emitter`
+can do and more. To use the `Emitter` functionality within `App`, the
+object has to be cast to `Emitter` type and be passed to the `Emitter`
+methods.
+
+[source,c]
+------
+include::app-2.c[]
+------
+
+The casting to `Emitter` type is done using `EMITTER()` macro. This is
+only possible because `App` is derived type of `Emitter`.
+
+Within the callback handler, we invoke the `app_quit()` method, to
+exit from the application.
+
+The previous example, makes the `app` a global variable, so that it
+can be accessed from, the callback handler. Another way to pass data
+to the callback handler is using the data pointer in the
+`emitter_set_callback` method. We pass the `app` object to the data
+pointer in `emitter_set_callback`. This pointer is then passed back to
+the callback function, as the second argument. The modified code is
+shown below.
+
+[source,c]
+------
+include::app-3.c[]
+------
+
+== The Widgets
+
+The UI elements like buttons and labels are called widgets. For all
+the widgets the base type is `Widget`, which derives from
+`Emitter`. The `Widget` type implements a lot of common functionality
+and methods that reequired for all widgets. So that each widget
+implementation does not have to implement all of that.
+
+The `Button` is an example of a widget that derives from the `Widget`
+type. The following example shows how to add a button to the app
+window. The `app_add()` method is used to any widget to the the
+application windows. Since any type of widget can be added to the
+application window, the second argument of `app_add()` is a pointer to
+a `Widget`. So we cast the button to a `Widget` type and pass it to
+`app_add()`.
+
+[source,c]
+------
+include::app-4.c[]
+------
+
+Now the `Button` type, derives from the `Emitter` type. So we can
+associate a callback with the button. And when the button is clicked,
+it emits `SIGNAL_CLICKED`, and the associated callback will get
+invoked.
+
+Exercise 1: Can you modify the previous program, so that when the button
+is clicked, the program prints `"Hello World!"`.
+
+
+
