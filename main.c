@@ -1,11 +1,6 @@
 #include "base.h"
 #include <stdio.h>
 
-// used in error.c
-Error *error_fatal;
-Error *error_abort;
-int errno;
-
 int main()
 {
    object_type_register();
