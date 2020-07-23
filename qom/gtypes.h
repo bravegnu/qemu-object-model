@@ -42,8 +42,8 @@ typedef signed int gint32;
 typedef unsigned int guint32;
 typedef signed long long gint64;
 typedef unsigned long long guint64;
-typedef gint32  gssize;
-typedef guint32 gsize;
+typedef gint64  gssize;
+typedef guint64 gsize;
 
 #define GPOINTER_TO_INT(p)	((gint)   (p))
 #define GPOINTER_TO_UINT(p)	((guint)  (p))
@@ -60,7 +60,7 @@ typedef gint   gboolean;
 typedef unsigned char   guchar;
 typedef unsigned short  gushort;
 typedef unsigned long   gulong;
-typedef unsigned int    guint;
+typedef unsigned long   guint;
 
 typedef float   gfloat;
 typedef double  gdouble;
