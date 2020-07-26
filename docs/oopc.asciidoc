@@ -223,7 +223,7 @@ typedef struct Emitter
         void *data;
         SignalSet when;
 } Emitter;
------
+------
 
 It is mandatory for all object structures, to inherit from
 `Object`. The remaining attributes are private object attributes.
