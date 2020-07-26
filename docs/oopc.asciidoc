@@ -1,12 +1,14 @@
-= QWT
+= Object Oriented Programming in QWT
+:data-uri:
 
-== Introduction
+== Using QWT
+
+=== Introduction
 
 QWT is a simple GUI library written using QOM, to demonstrate object
-oriented programming in C using QOM. It has Python bindings, so that
-you can first experiment in Python and try the same in C.
+oriented programming in C using QOM.
 
-== The Emitter Object
+=== The Emitter Object
 
 At the heart of QWT is the Emitter, that allows callbacks based
 programming. An emitter is an object that can invoke a callback, in
@@ -54,7 +56,7 @@ is to be triggered.
 include::emitter-3.c[]
 ------
 
-== The App Object
+=== The App Object
 
 The next object that we are going to look at is the `App` object. The
 following program shows the creation of the `App` object. The
@@ -103,7 +105,7 @@ shown below.
 include::app-3.c[]
 ------
 
-== The Widgets
+=== The Widgets
 
 The UI elements like buttons and labels are called widgets. For all
 the widgets the base type is `Widget`, which derives from
@@ -124,13 +126,392 @@ a `Widget`. So we cast the button to a `Widget` type and pass it to
 include::app-4.c[]
 ------
 
+image::app-4.png[]
+
 Now the `Button` type, derives from the `Emitter` type. So we can
 associate a callback with the button. And when the button is clicked,
 it emits `SIGNAL_CLICKED`, and the associated callback will get
 invoked.
 
-Exercise 1: Can you modify the previous program, so that when the button
-is clicked, the program prints `"Hello World!"`.
+.Exercise 1
+Can you modify the previous program, so that when the button is
+clicked, the program prints `"Hello World!"`.
 
+=== The Layouts
 
+In the previous example, the Button widget tookup the entire space on
+the Window. If more that one widget needs to be placed in Window, a
+special type of widget is required, called the Layout. The `BoxLayout`
+allows widgets to be arranged horizontally or vertically. And can be
+nested to create complex arrangements.
 
+If the BoxLayout is oriented horizontally, the height of the widgets
+will be the same, the available width is allocated depending on the
+minimum width required for each widget, and the remaining space is
+allocated equally among the widgets.
+
+If the BoxLayout is oriented vertically, the width of the widgets will
+be the same, the available height is allocated depending on the
+minimum height required for each widget, and the remaining space is
+allocated equally among the widgets.
+
+In the below example, two buttons are created and added to the
+`BoxLayout`. The orientation is set using the
+`box_layout_set_orientation()` method. For adding to the `BoxLayout`,
+we use the `layout_add_widget()` method. This method is defined as
+part of the `Layout` type. The inheritance hierarchy is shown below.
+
+------
+Emitter -> Widget -> Layout -> BoxLayout
+------
+
+[source,c]
+------
+include::layout-1.c[]
+------
+
+image::layout-1.png[]
+
+When the window is resized the widgets, expand to accommodate the
+available space.
+
+image::layout-1-2.png[]
+
+The following code shows two horzontal box layouts, nested within a
+vertical box layout.
+
+[source,c]
+------
+include::layout-2.c[]
+------
+
+image::layout-2.png[]
+
+.Exercise 2
+Modify the previous program, to create a 3x3 keypad matrix of buttons.
+
+=== Inheritance Hierarchy
+
+The complete set of types and their inheritance hierarchy is shown in
+the following diagram.
+
+image::class-diagram.png[]
+
+== Using Qemu Object Model (QOM)
+
+=== Emitter and Type Definition
+
+QOM is a framework for writing object oriented programs in C. To
+define QOM Type, two typedef-ed structures are defined.
+
+  * `Emitter`
+  * `EmitterClass`
+
+The `Emitter` is used to hold attributes specific to an object, and
+the `EmitterClass` is used to hold attributes common to all objects of
+the type. The `Emitter` is defined as shown below. The `Emitter` has
+the `Object` as the first attribute. So as to inherit all the
+attributes of `Object`. So if you have a pointer to `Emitter`, then a
+pointer to `Object` can be obtained by casting it to `Object *`
+
+[source,c]
+------
+typedef struct Emitter
+{
+        Object parent;
+        Callback cb;
+        void *data;
+        SignalSet when;
+} Emitter;
+-----
+
+It is mandatory for all object structures, to inherit from
+`Object`. The remaining attributes are private object attributes.
+
+The `EmitterClass` is defined as shown below. Here there are no new
+attributes common to all `Emitter` objects. Here again we have
+`ObjectClass` as the first attribute, so we inherit all the attributes
+of the `ObjectClass`.
+
+[source,c]
+------
+typedef struct EmitterClass {
+        ObjectClass parent_class;
+} EmitterClass;
+------
+
+The `Object` and `ObjectClass` have attributes used by the QOM
+internally. An example method definition is shown below.
+
+[source,c]
+-------
+void emitter_set_callback(Emitter *this, Callback cb, void *data)
+{
+        this->cb = cb;
+        this->data = data;
+}
+------
+
+The method operates on the objects attributes, and in this case sets
+the callback and the associated data pointer.
+
+The `instance_init()` function is used to initialized the create
+object. The initialization function is specified as part of the type
+definition.
+
+[source,c]
+-------
+static void instance_init(Object *obj)
+{
+        Emitter *this = EMITTER(obj);
+        this->cb = NULL;
+        this->when = 0;
+}
+-------
+
+The type is defined as shown below. Here `name` is a string name,
+given to the type, `parent` is the string name of the parent type,
+that we are inheriting from. The `instance_size` is the size of the
+object structure, and `class_size` is the size of the class
+structure. `instance_init` is the function that can initialize the
+object's attributes, and `class_init` is the function that can
+initialize the class attributes. The `abstract` field indicates
+whether the object of this type can be instantiated. If `abstract` is
+true, the object's methods are not completely defined and hence the
+object cannot be instantiated. It can only be inherited from.
+
+[source,c]
+-------
+static const TypeInfo type_info = {
+        .name = TYPE_EMITTER,
+        .parent = TYPE_OBJECT,
+        .instance_size = sizeof(Emitter),
+        .abstract = false,
+        .class_size = sizeof(EmitterClass),
+        .instance_init = instance_init,
+        .class_init = class_init,
+};
+-------
+
+The `TYPE_EMITTER` macro is defined to the string `"emitter"`, a
+unique name with which the type is identified.
+
+-------
+#define TYPE_EMITTER "emitter"
+-------
+
+In addition, we define the following macros, to help with casting a
+pointer, to the corresponding `Emitter *` or `EmitterClass *`. When
+the cast is done, the QOM type system, check's if the cast is
+valid. If not valid, then an assertion error is raised and the program
+is terminated.
+
+[source,c]
+-------
+#define EMITTER_CLASS(klass) \
+        OBJECT_CLASS_CHECK(EmitterClass, klass, TYPE_EMITTER)
+
+#define EMITTER(obj) \
+        OBJECT_CHECK(Emitter, obj, TYPE_EMITTER)
+-------
+
+== App and Inheritance
+
+The `App` derives from the `Emitter` and adds its own object
+attributes. The `App` structure is defined as below.
+
+[source,c]
+-------
+typedef struct App
+{
+        /* private */
+        Emitter parent;
+        SDL_Window *window;
+        SDL_Renderer *renderer;
+        Widget *child;
+        bool quit_flag;
+
+        /* public */
+        Theme *theme;
+} App;
+-------
+
+And the `AppClass` is defined as below.
+
+[source,c]
+------
+typedef struct AppClass {
+        EmitterClass parent_class;
+} AppClass;
+------
+
+`App` as we have seen earlier, implements its own methods to
+initialize and create the GUI window, and process input events. And
+since the `App` has an `Emitter`, an `App *` can be casted to an
+`Emitter *`, and can be used with the `Emitter` methods.
+
+== Widget, Button and Method Overriding
+
+So far we have been working with object that do not have any
+attributes in the class structure. Let's see the defintion of a
+widget. The `Widget` derives from `Emitter`, add its own object
+attributes, and class attributes.
+
+[source,c]
+------
+typedef struct Widget
+{
+        /* private */
+        Emitter parent;
+        SDL_Rect rect;
+        App *app;
+} Widget;
+------
+
+[source,c]
+------
+typedef struct WidgetClass {
+        EmitterClass parent_class;
+
+        void (*draw)(Widget *this, SDL_Renderer *renderer);
+        void (*handle_event)(Widget *this, SDL_Event *event);
+        void (*get_min_size)(Widget *this, int *width, int *height);
+        void (*set_size)(Widget *this, int width, int height);
+        void (*set_pos)(Widget *this, int x, int y);
+        void (*set_app)(Widget *this, App *app);
+} WidgetClass;
+------
+
+Here the class attributes that are added, are function pointers. They
+are created as function pointers, so that they can be customized by a
+derived class. During the `class_init`, a derived class can modify the
+function pointers to point to their own implementation of these
+methods.
+
+These function pointers and invoked by methods as shown below.
+
+[source,c]
+------
+void widget_draw(Widget *this, SDL_Renderer *renderer)
+{
+        WIDGET_GET_CLASS(this)->draw(this, renderer);
+}
+
+void widget_handle_event(Widget *this, SDL_Event *event)
+{
+        WIDGET_GET_CLASS(this)->handle_event(this, event);
+}
+
+void widget_get_min_size(Widget *this, int *width, int *height)
+{
+        WIDGET_GET_CLASS(this)->get_min_size(this, width, height);
+}
+
+void widget_set_size(Widget *this, int width, int height)
+{
+        WIDGET_GET_CLASS(this)->set_size(this, width, height);
+}
+
+void widget_set_pos(Widget *this, int x, int y)
+{
+        WIDGET_GET_CLASS(this)->set_pos(this, x, y);
+}
+
+void widget_set_app(Widget *this, App *app)
+{
+        WIDGET_GET_CLASS(this)->set_app(this, app);
+}
+------
+
+The `Button` for example customizes the `Widget`, by defining its own
+`draw`, `get_min_size` and `handle_event` methods, and setting up the
+function pointer
+
+[source,c]
+------
+static void class_init(ObjectClass *oc, void *data)
+{
+        WidgetClass *wc = WIDGET_CLASS(oc);
+
+        wc->draw = button_draw;
+        wc->get_min_size = button_get_min_size;
+        wc->handle_event = button_handle_event;
+}
+------
+
+So when the `widget_draw()` method is invoked, it invokes the function
+pointer, and ends up invoking the `Button`'s implementation of the
+draw method. This way a method of the base type can be overridden with
+a different implementation in the derived type.
+
+=== Type Registration
+
+The TypeInfo structure created for each type, as indicated earlier is
+registered in the QOM's type database, using type registration
+function. The type registration for `Button` is shown below. Here the
+`type_register_static()` API, provided by QOM, is invoked to register
+the type. This way QOM, can recognize each type by it's name.
+
+[source,c]
+------
+void button_type_register(void)
+{
+        type_register_static(&type_info);
+}
+------
+
+The type registration of all the defined types are registered in
+`qwt_init()` as shown below.
+
+[source,c]
+------
+void qwt_init()
+{
+        object_type_register();
+        emitter_type_register();
+        theme_type_register();
+        app_type_register();
+        widget_type_register();
+        button_type_register();
+        label_type_register();
+        layout_type_register();
+        box_layout_type_register();
+        toggle_button_type_register();
+}
+------
+
+=== Object Instantiation and Initialization
+
+To create a new object, a constructor function is provided, for
+example, the button has the following constructor function. This
+invokes the `object_new()` method provided by QOM, and passes the type
+name as string.
+
+[source,c]
+------
+Button *button_new(void)
+{
+        return (Button *)object_new(TYPE_BUTTON);
+}
+------
+
+In `object_new()` QOM will dynamically allocate the memory required
+for the object instance. It will then invoke the `instance_init()` of
+all the base types first and then finally invoke `intance_init()` of
+`Button`. So by the time `button_new()` returns, all the attributes in
+the base structures and the current structure is properly initialized.
+
+=== Class Instantiation and Initialization
+
+Object structures are instantiated once for each object of the
+type. But class structures are instantiated only once, during type
+registration. First the class structure is dynamically allocated, and
+the class structure is initialized, by invoking `class_init()` of all
+the base types and then the `class_init()` of the type being
+registered. So by the time type registration function return, the
+attributes in the base structures and the current structure is
+properly initialized.
+
+.Exercise 3
+Inherit from `Button` and create a type called `FixedSizeButton`. The
+size of the button will always be 20 x 20.
