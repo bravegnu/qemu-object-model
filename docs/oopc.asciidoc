@@ -250,7 +250,7 @@ void emitter_set_callback(Emitter *this, Callback cb, void *data)
         this->cb = cb;
         this->data = data;
 }
-------
+-------
 
 The method operates on the objects attributes, and in this case sets
 the callback and the associated data pointer.
