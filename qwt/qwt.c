@@ -8,6 +8,7 @@ void qwt_init()
         app_type_register();
         widget_type_register();
         button_type_register();
+        label_type_register();
         layout_type_register();
         box_layout_type_register();
         toggle_button_type_register();
