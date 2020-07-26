@@ -16,42 +16,50 @@ static void resize(BoxLayout *this)
                 return;
 
         if (this->orientation == BOX_LAYOUT_HORIZONTAL) {
-                int max_width = widget->rect.w / layout->nchild;
+                int total_min_width = 0;
                 int offset = 0;
+
+                for (i = 0; i < layout->nchild; i++) {
+                        widget_get_min_size(layout->children[i],
+                                            &min_width, &min_height);
+
+                        total_min_width += min_width;
+                }
+
+                int fill_width = (widget->rect.w - total_min_width) / layout->nchild;
 
                 for (i = 0; i < layout->nchild; i++) {
                         widget_set_pos(layout->children[i],
                                        widget->rect.x + offset, widget->rect.y);
                         widget_get_min_size(layout->children[i],
                                             &min_width, &min_height);
-                        if (max_width < min_width) {
-                                widget_set_size(layout->children[i],
-                                                min_width, widget->rect.h);
-                                offset += min_width;
-                        } else {
-                                widget_set_size(layout->children[i],
-                                                max_width, widget->rect.h);
-                                offset += max_width;
-                        }
+                        widget_set_size(layout->children[i],
+                                        min_width + fill_width,
+                                        widget->rect.h);
+                                offset += min_width + fill_width;
                 }
         } else {
-                int max_height = widget->rect.h / layout->nchild;
+                int total_min_height = 0;
                 int offset = 0;
+
+                for (i = 0; i < layout->nchild; i++) {
+                        widget_get_min_size(layout->children[i],
+                                            &min_width, &min_height);
+
+                        total_min_height += min_height;
+                }
+
+                int fill_height = (widget->rect.h - total_min_height) / layout->nchild;
 
                 for (i = 0; i < layout->nchild; i++) {
                         widget_set_pos(layout->children[i],
                                        widget->rect.x, widget->rect.y + offset);
                         widget_get_min_size(layout->children[i],
                                             &min_width, &min_height);
-                        if (max_height < min_height) {
-                                widget_set_size(layout->children[i],
-                                                widget->rect.w, min_height);
-                                offset += min_height;
-                        } else {
-                                widget_set_size(layout->children[i],
-                                                widget->rect.w, max_height);
-                                offset += max_height;
-                        }
+                        widget_set_size(layout->children[i],
+                                        widget->rect.w,
+                                        min_height + fill_height);
+                        offset += min_height + fill_height;
                 }
         }
 }
